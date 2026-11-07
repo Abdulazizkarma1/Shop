@@ -6,12 +6,20 @@ Open your Netlify project's Environment variables configuration. Add these varia
 
 | Variable | Value |
 | --- | --- |
-| `VITE_SUPABASE_URL` | `https://fyssbtadzjqvmxglowdf.supabase.co` for the connected project |
+| `VITE_SUPABASE_URL` | `https://kimmdcrsjmtmlzwfmqwv.supabase.co` for the dedicated **shop** project |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | The active default publishable key (`sb_publishable_...`) from Supabase → Settings → API Keys |
 
 Build command: `npm run build`. Publish directory: `dist`. Node 22 or newer is recommended. Vite inserts `VITE_` values into the browser bundle during the build, so changing them requires another build. These two values are browser-safe. Never put an Mnotify key, database password, Supabase service-role key, or admin password in a `VITE_` variable.
 
 The login page explains missing browser configuration instead of silently opening a local demo. After deploying over the earlier version, reload the app to allow the new service worker to activate, then reload once more if the old dashboard remains visible. Do not clear site storage before exporting any previous local records.
+
+## Project migration
+
+The active backend is the dedicated **shop** project (`kimmdcrsjmtmlzwfmqwv`). Replace both Netlify browser values if the deployment still points at the earlier project, then rebuild and sign in online again. Auth accounts, keys, Edge Function secrets and Cron jobs belong to their own Supabase project.
+
+The earlier shop setup contained no synced sales, purchases, payments, SMS requests or stock counts at migration time. Its shop-only schedule is retired; its data is retained. Offline sessions and browser databases are now scoped to the project URL. Existing browser records are not automatically replayed into this project. An Admin can export previous-project records in Settings if this device contains any, then reconcile them before recording new trading activity.
+
+Add Mnotify secrets to **shop**, even if they were previously entered in another project. The admin account has been recreated in **shop** with the requested login details.
 
 ## 2. Sign in and create the team
 
@@ -101,6 +109,8 @@ Run `npm ci`, `npm test` and `npm run build`. The tests cover every dashboard pa
 For a new Supabase project, apply the shop migrations in order and change the project URL in the scheduler migration before scheduling the worker. Deploy the Edge Functions with their shared files and `supabase/config.toml`. Do not rerun migrations already listed in the hosted project's migration history.
 
 Monitor failed Cron calls and Edge Function errors in Supabase, and failed deliveries in Mnotify. Export backups and verify the closing physical stock regularly. All new shop tables use RLS. The receipt RPC intentionally permits a public lookup by a random receipt token and returns receipt-only fields, excluding customer phone and internal release notes.
+
+The project's Auth advisor currently reports disabled [leaked-password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). This is managed in Supabase Auth settings. The authenticated ledger RPCs deliberately use checked server privileges; the public receipt lookup deliberately accepts only a random receipt token.
 
 Smart dashboard notes currently use local rules. No external AI provider or AI key is needed for sales, stock, receipts, sync, users or SMS.
 

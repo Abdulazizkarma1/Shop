@@ -1,4 +1,4 @@
-import { supabase, normalizePhone, today, invoke } from './client.js';
+import { supabase, normalizePhone, today, invoke, storageScope } from './client.js';
 
 export const blankState = () => ({ products: [], sales: [], purchases: [], payments: [], sms: [], outbox: [], settings: {}, lastSync: null, error: '', accessDenied: false });
 const money = n => Math.round(Number(n) * 100) / 100;
@@ -6,7 +6,7 @@ const instances = new Map();
 let database;
 function openDB() {
   if (!database) database = new Promise((resolve, reject) => {
-    const request = indexedDB.open('grainkeeper-ledger-v2', 1);
+    const request = indexedDB.open(`grainkeeper-ledger-v2:${storageScope}`, 1);
     request.onupgradeneeded = () => { request.result.createObjectStore('workspaces'); request.result.createObjectStore('receipts'); };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(new Error('Offline storage is unavailable. Allow browser storage before recording sales.'));
@@ -200,7 +200,7 @@ export class Ledger {
         });
       } catch (error) { await this.change(s => ({ ...s, error: error.message || 'Could not reach the server. Your records remain saved.' })); }
     };
-    this.running = (navigator.locks ? navigator.locks.request(`grainkeeper-sync-${this.userId}`, synchronize) : synchronize()).finally(() => { this.running = null; });
+    this.running = (navigator.locks ? navigator.locks.request(`grainkeeper-sync-${storageScope}-${this.userId}`, synchronize) : synchronize()).finally(() => { this.running = null; });
     return this.running;
   }
   async saveProduct(product) {
@@ -233,5 +233,25 @@ export async function cachedReceipt(token, value) {
       all.onerror = () => reject(all.error);
     };
     req.onerror = () => reject(req.error);
+  });
+}
+
+// Read-only export of the former, unscoped workspace. Never replay it into another project.
+export async function previousProjectData() {
+  return new Promise(resolve => {
+    const request = indexedDB.open('grainkeeper-ledger-v2');
+    request.onupgradeneeded = () => request.transaction.abort();
+    request.onerror = () => resolve([]);
+    request.onsuccess = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('workspaces')) { db.close(); resolve([]); return; }
+      const tx = db.transaction('workspaces'), store = tx.objectStore('workspaces');
+      const values = store.getAll(), keys = store.getAllKeys();
+      tx.oncomplete = () => {
+        const records = values.result.map((state, i) => ({ workspaceId: keys.result[i], state })).filter(({ state }) => state.sales?.length || state.purchases?.length || state.payments?.length || state.outbox?.length || state.products?.some(p => Number(p.stock) !== 0));
+        db.close(); resolve(records);
+      };
+      tx.onerror = () => { db.close(); resolve([]); };
+    };
   });
 }

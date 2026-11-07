@@ -27,7 +27,7 @@ grant execute on function public.shop_job_authorized(text) to service_role;
 -- Replace this URL when installing the schema in a different Supabase project.
 select cron.schedule('shop-sms-worker','*/5 * * * *',$job$
  select net.http_post(
-  url:='https://fyssbtadzjqvmxglowdf.supabase.co/functions/v1/shop-process-sms',
+  url:='https://kimmdcrsjmtmlzwfmqwv.supabase.co/functions/v1/shop-process-sms',
   headers:=jsonb_build_object('Content-Type','application/json','x-job-secret',(select decrypted_secret from vault.decrypted_secrets where name='shop_sms_job_secret')),
   body:='{}'::jsonb,timeout_milliseconds:=90000);
 $job$);

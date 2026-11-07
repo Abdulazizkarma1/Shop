@@ -1,6 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
 const env = import.meta.env || {};
+export function projectScope(url) {
+  try { return new URL(url).hostname.toLowerCase(); } catch { return 'unconfigured'; }
+}
+export const storageScope = projectScope(env.VITE_SUPABASE_URL);
 export const configReady = Boolean(env.VITE_SUPABASE_URL && env.VITE_SUPABASE_PUBLISHABLE_KEY);
 function connect() {
   if(!configReady) return null;

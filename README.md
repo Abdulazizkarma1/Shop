@@ -2,6 +2,8 @@
 
 A React + Tailwind shop ledger for rice and groceries, with Supabase Auth, database roles, durable IndexedDB transactions, receipts and a server-owned Mnotify queue. The interface is designed for phones and can record trading activity while offline after a trusted-device sign-in.
 
+The active Supabase backend is the dedicated **shop** project. Browser offline records and sign-in tickets are isolated by project.
+
 See **[the setup and operating guide](docs/SETUP.md)** for Netlify variables, Supabase secrets, account roles, stock setup, receipts and the daily 7 pm report.
 
 ## Features

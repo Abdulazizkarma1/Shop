@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import 'fake-indexeddb/auto';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { applyOperation, blankState, Ledger, cachedReceipt, collectedToday } from '../src/offline.js';
-import { normalizePhone, today } from '../src/client.js';
+import { applyOperation, blankState, Ledger, cachedReceipt, collectedToday, previousProjectData } from '../src/offline.js';
+import { normalizePhone, today, projectScope } from '../src/client.js';
 import * as UI from '../.checks/ui.mjs';
 Object.defineProperty(globalThis, 'navigator', { value: { onLine: false }, configurable: true });
 const product = { id: 'rice', name: 'Rice', category: 'Rice', variant: '4 × 10 kg packs', unit: 'bag', stock: 3, low: 1, price: 1200, unitPrice: 320, fraction: .25, active: true, color: 'gold', icon: 'R' };
@@ -68,4 +68,17 @@ test('login and both role settings screens render', () => {
 });
 test('a cloud-rejected product does not hide its saved offline receipt during rebase', () => {
   const d=sale(); const result=applyOperation(blankState(),{kind:'sale',data:d},false); assert.equal(result.sales[0].receiptToken,d.receiptToken);
+});
+
+test('project changes use separate cache and offline sign-in namespaces', () => {
+  assert.notEqual(projectScope('https://project-one.supabase.co'), projectScope('https://project-two.supabase.co'));
+  assert.equal(projectScope('not-a-url'), 'unconfigured');
+});
+test('previous-project records can be exported without entering the new ledger', async () => {
+  const oldUser='previous-user';
+  const oldDB=await new Promise((resolve,reject)=>{const r=indexedDB.open('grainkeeper-ledger-v2',1);r.onupgradeneeded=()=>r.result.createObjectStore('workspaces');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
+  await new Promise((resolve,reject)=>{const t=oldDB.transaction('workspaces','readwrite');t.objectStore('workspaces').put({...blankState(),outbox:[{kind:'sale',clientId:'previous-record',data:{}}]},oldUser);t.oncomplete=resolve;t.onerror=()=>reject(t.error);});
+  oldDB.close();
+  const records=await previousProjectData();assert.equal(records[0].workspaceId,oldUser);assert.equal(records[0].state.outbox[0].clientId,'previous-record');
+  const current=new Ledger(oldUser);await current.start();assert.equal(current.current.outbox.length,0);
 });

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Wheat, LockKeyhole, WifiOff, LogIn } from 'lucide-react';
-import { supabase } from './client.js';
+import { supabase, storageScope } from './client.js';
 
-const TICKET = 'gk_offline_access_v2';
+const TICKET = `gk_offline_access_v2:${storageScope}`;
 const MAX_OFFLINE = 24 * 60 * 60 * 1000;
 const cached = () => { try { return JSON.parse(localStorage.getItem(TICKET)); } catch { return null; } };
 export function AuthGate({ children }) {
