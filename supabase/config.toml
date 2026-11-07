@@ -1,6 +1,9 @@
 [functions.send-receipt]
 verify_jwt = true
-
 [functions.daily-owner-report]
-# This function verifies either the signed-in owner JWT or DAILY_REPORT_JOB_SECRET itself.
+verify_jwt = true
+[functions.shop-manage-users]
+verify_jwt = true
+[functions.shop-process-sms]
+# A vault-backed scheduler token or a verified admin session is checked in the handler.
 verify_jwt = false

@@ -5,3 +5,7 @@ dist/
 !.env.example
 .DS_Store
 .netlify/
+.checks/
+upload/
+.codex/
+supabase/.temp/
