@@ -33,9 +33,9 @@ The included `netlify.toml` provides the single-page app redirect. Add `VITE_SUP
 
 ## Supabase data model
 
-The migration creates isolated `shop_*` tables alongside existing project data. Tables have RLS enabled; shop members are required for reads and writes. `shop_record_sale(jsonb)` locks and updates inventory atomically and supports idempotent offline replay. The public receipt RPC resolves a receipt only by its random token.
+The migration creates isolated `shop_*` tables alongside any existing project data. Tables have RLS enabled; shop members are required for reads and writes. `shop_record_sale(jsonb)` locks and updates inventory atomically and supports idempotent offline replay. The public receipt RPC resolves a receipt only by its random token.
 
-The current project has existing FarmRelay data, so this change only adds prefixed tables and functions; it does not alter the existing FarmRelay tables. To onboard the owner, first create the Supabase Auth user, then add that user ID to `public.shop_members` with the `owner` role using a trusted admin session. Do not expose a service-role key in the client.
+The migration uses a dedicated `shop_*` namespace and does not alter unrelated application tables. To onboard the owner, first create the Supabase Auth user, then add that user ID to `public.shop_members` with the `owner` role using a trusted admin session. Do not expose a service-role key in the client.
 
 ## Mnotify setup
 

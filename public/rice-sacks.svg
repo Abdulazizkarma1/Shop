@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 420" role="img" aria-labelledby="title desc">
+  <title id="title">Rice sacks illustration</title>
+  <desc id="desc">A warm-toned illustration of stacked sacks of rice in a storeroom.</desc>
+  <defs>
+    <linearGradient id="wall" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#294f3f"/><stop offset="1" stop-color="#17372f"/></linearGradient>
+    <linearGradient id="sack" x1="0" x2="0.9" y1="0" y2="1"><stop stop-color="#f1dca4"/><stop offset="1" stop-color="#c9a85e"/></linearGradient>
+    <linearGradient id="sage" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#d9dfb2"/><stop offset="1" stop-color="#a4b182"/></linearGradient>
+    <pattern id="grain" width="14" height="14" patternUnits="userSpaceOnUse"><circle cx="3" cy="4" r="1.2" fill="#fff5d0" opacity=".7"/><circle cx="10" cy="9" r="1" fill="#fff5d0" opacity=".55"/></pattern>
+  </defs>
+  <path fill="url(#wall)" d="M0 0h520v420H0z"/>
+  <path fill="#193c32" d="M0 342h520v78H0z"/>
+  <path fill="#b8aa7b" opacity=".35" d="M35 0h7v350h-7zM478 0h6v350h-6z"/>
+  <g stroke="#856f3b" stroke-width="3" stroke-linejoin="round">
+    <path fill="url(#sage)" d="M-24 300q6-26 31-36l22-42q52-17 105 6l18 44q27 10 27 31v56H-24z"/>
+    <path fill="url(#sack)" d="M155 290q8-34 37-41l14-49q58-24 123 0l19 49q30 9 34 41l1 69H151z"/>
+    <path fill="url(#sage)" d="M347 305q5-27 31-35l20-46q54-19 107 5l13 41q25 9 28 34v55H343z"/>
+    <path fill="url(#sack)" d="M35 193q9-26 31-33l15-48q55-20 110 2l16 45q26 12 29 37l-1 57H31z"/>
+    <path fill="url(#sage)" d="M239 192q8-31 35-37l15-48q53-18 105 5l17 44q24 8 27 35v59H235z"/>
+    <path fill="url(#sack)" d="M115 91q7-28 34-34l14-43q48-15 97 3l16 42q23 10 24 33v61H111z"/>
+    <path fill="url(#sage)" d="M310 89q6-23 28-31l15-39q50-17 97 4l13 40q25 8 28 30v61H306z"/>
+  </g>
+  <g fill="url(#grain)" opacity=".38"><path d="M-12 277h185v84H-12zM164 265h206v91H164zM355 280h166v78H355zM43 170h184v67H43zM247 170h181v67H247zM122 69h171v70H122zM316 68h170v72H316z"/></g>
+  <g fill="none" stroke="#fff3ce" stroke-opacity=".4" stroke-width="2"><path d="M18 228q51 15 105 3M188 247q61 14 118 0M369 244q46 12 91 1M58 144q49 12 98 1M268 145q47 11 95 1M139 42q49 10 95 1M329 42q48 11 85 0"/></g>
+  <path fill="#f1dca4" d="M215 397q44-13 90 0l-8 7h-72z" opacity=".85"/>
+  <circle cx="445" cy="47" r="20" fill="#eac75d" opacity=".13"/>
+</svg>
