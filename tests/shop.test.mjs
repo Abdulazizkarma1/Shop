@@ -50,13 +50,28 @@ test('Ghana phone normalization accepts local and international forms', () => {
 for (const filled of [false, true]) for (const adminMode of [false, true]) {
   test(`every dashboard page renders with ${filled ? 'saved' : 'empty'} data as ${adminMode ? 'Admin' : 'Seller'}`, () => {
     const sales = filled ? [sale()] : [], purchases = filled ? [{ id: 'P-TEST', clientId: 'p1', supplier: 'Supplier', product: 'Rice', quantity: 1, total: 1000, paid: 500, balance: 500, date: today(), due: '', note: '' }] : [];
-    const props = { products: filled ? [product] : [], sales, purchases, search: '', setSearch: noop, saleFilter: 'All sales', setSaleFilter: noop, adminMode, modal: '', selectedProduct: product, setModal: noop, setSelectedProduct: noop, updateProduct: noop, setActive: noop, setReceipt: noop, payBalance: noop, paySupplierBalance: noop, totalGoods: filled ? 3 : 0, todaySales: sales, todayRevenue: 300, todayCollected: 100, outstanding: 200, pendingPurchases: 500, lowStock: [], online: true, notify: noop, smartOpen: false, setSmartOpen: noop };
+    const props = { products: filled ? [product] : [], sales, purchases, search: '', setSearch: noop, saleFilter: 'All sales', setSaleFilter: noop, adminMode, modal: '', selectedProduct: product, selected: product, state: { ...blankState(), outbox: [] }, status: 'Synced', setModal: noop, setSelected: noop, setSelectedProduct: noop, updateProduct: noop, setActive: noop, setReceipt: noop, onReceipt: noop, payBalance: noop, paySupplierBalance: noop, totalGoods: filled ? 3 : 0, todaySales: sales, todayRevenue: 300, todayCollected: 100, outstanding: 200, pendingPurchases: 500, lowStock: [], online: true, notify: noop, smartOpen: false, setSmartOpen: noop };
     for (const name of ['Overview', 'SalesPage', 'InventoryPage', 'PurchasesPage', 'ReceivablesPage', 'ReportsPage']) assert.ok(renderToStaticMarkup(React.createElement(UI[name], props)).length > 20, name);
-    assert.ok(renderToStaticMarkup(React.createElement(UI.InventoryPage, { ...props, products: [product], modal: 'edit-product' })).includes(adminMode ? 'Update product' : 'Inventory'));
+    assert.ok(renderToStaticMarkup(React.createElement(UI.InventoryPage, { ...props, products: [product] })).includes('Rice'));
+    if (adminMode) assert.ok(renderToStaticMarkup(React.createElement(UI.EditProductModal, { product, onClose: noop, onSave: noop })).includes('Save changes'));
   });
 }
 test('sale, purchase and receipt dialogs render without a database connection', () => {
   for (const [name, props] of [['SaleModal',{products:[product]}],['SaleModal',{products:[]}],['PurchaseModal',{products:[product]}],['ProductModal',{}],['EditProductModal',{product}],['ReceiptModal',{sale:sale(),settings:{}}]]) assert.ok(renderToStaticMarkup(React.createElement(UI[name],{...props,onClose:noop,onSave:noop,onSend:noop,onArchive:noop,onNewProduct:noop})).length>30);
+});
+
+test('counter sale screen uses product buttons, keeps standard price explicit, and requires credit details', () => {
+  const html=renderToStaticMarkup(React.createElement(UI.SaleModal,{products:[product],onClose:noop,onSave:noop}));
+  assert.match(html,/Choose a product/); assert.match(html,/Standard price/); assert.match(html,/Use a different price for this sale/);
+  assert.match(html,/Paid in full/); assert.match(html,/Part paid/); assert.match(html,/Pay later/); assert.match(html,/Phone for a digital receipt/);
+  assert.doesNotMatch(html,/barcode|scanner|camera scan/i);
+});
+
+test('compact More destination keeps seller and admin tools separated', () => {
+  const seller=renderToStaticMarkup(React.createElement(UI.MorePage,{adminMode:false,go:noop,signOut:noop,state:blankState()}));
+  const admin=renderToStaticMarkup(React.createElement(UI.MorePage,{adminMode:true,go:noop,signOut:noop,state:blankState()}));
+  assert.match(seller,/Sales/); assert.match(seller,/Balances/); assert.doesNotMatch(seller,/Purchases|Daily report/);
+  assert.match(admin,/Purchases/); assert.match(admin,/Reports/); assert.match(admin,/Settings/);
 });
 
 test('login and both role settings screens render', () => {

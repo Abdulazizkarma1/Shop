@@ -9,6 +9,11 @@ See **[the setup and operating guide](docs/SETUP.md)** for Netlify variables, Su
 ## Features
 
 - Login on startup; Admin and Seller accounts with server-enforced permissions.
+- A focused counter home with one large **New Sale** action, today’s sales and collections, and a plain-language sync status.
+- Four quick destinations on phones: Home, Stock, New sale and More. Less-used records and Admin tools live under More.
+- Large product choices, quantity controls, a clear standard price, and a separate negotiated price for that sale only.
+- Credit details are required before saving an unpaid sale; customer phone stays optional for a digital receipt.
+- Responsive sale, stock, balances and purchase records without wide tables or scanner workflows.
 - Inventory catalog, opening counts, prices, product archiving and an audit record of product changes.
 - Full rice bags and quarter-bag loose units; negotiated selling prices.
 - Paid, part-paid and credit sales, supplier purchases, and subsequent payments.
@@ -40,3 +45,5 @@ Netlify build command: `npm run build`; publish directory: `dist`. The build pre
 First login, user management and product configuration need internet. Trusted offline access lasts 24 hours after online verification. Offline receipts can be printed immediately; SMS delivery and links on new devices require the sale to sync. Keep the app open after reconnecting until its pending queue drains. Offline stock across multiple disconnected devices can conflict; rejected records remain saved for investigation.
 
 Starter stock is zero and non-rice prices require configuration. Existing records from the earlier local-only app are preserved for export, rather than silently merged. Dashboard smart notes use transparent local rules; they are not an external AI service. See the setup guide before recording live trading data.
+
+The app uses system fonts so the counter stays readable without a remote font download. This redesign did not change the Supabase schema or migrations. For future migrations, explicitly grant only the Data API access the app needs and add matching RLS policies: Supabase changed its defaults so new tables are no longer automatically exposed through the Data API.
