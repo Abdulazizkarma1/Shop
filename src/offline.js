@@ -1,6 +1,28 @@
 import { supabase, normalizePhone, today, invoke, storageScope } from './client.js';
 
 export const blankState = () => ({ products: [], sales: [], purchases: [], payments: [], sms: [], outbox: [], settings: {}, lastSync: null, error: '', accessDenied: false });
+const collectionFields = ['products', 'sales', 'purchases', 'payments', 'sms', 'outbox'];
+
+// Older app versions stored a smaller snapshot. Supply fields added later while
+// keeping every original field and preserving malformed values for device export.
+export function normalizeLedgerState(stored) {
+  const defaults = blankState();
+  if (stored == null) return defaults;
+  if (typeof stored !== 'object' || Array.isArray(stored)) return { ...defaults, recovery: { legacyRecord: stored } };
+  const state = { ...defaults, ...stored };
+  const recovery = { ...(stored.recovery && typeof stored.recovery === 'object' ? stored.recovery : {}) };
+  for (const key of collectionFields) {
+    if (Array.isArray(stored[key])) continue;
+    if (Object.hasOwn(stored, key)) recovery[key] = stored[key];
+    state[key] = defaults[key];
+  }
+  if (!state.settings || typeof state.settings !== 'object' || Array.isArray(state.settings)) {
+    if (Object.hasOwn(stored, 'settings')) recovery.settings = stored.settings;
+    state.settings = {};
+  }
+  if (Object.keys(recovery).length) state.recovery = recovery;
+  return state;
+}
 const money = n => Math.round(Number(n) * 100) / 100;
 const instances = new Map();
 let database;
@@ -17,7 +39,7 @@ async function read(userId) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const req = db.transaction('workspaces').objectStore('workspaces').get(userId);
-    req.onsuccess = () => resolve(req.result || blankState());
+    req.onsuccess = () => resolve(normalizeLedgerState(req.result));
     req.onerror = () => reject(req.error);
   });
 }
@@ -29,7 +51,7 @@ async function mutate(userId, fn) {
     const request = store.get(userId);
     let next, failure;
     request.onsuccess = () => {
-      try { next = fn(request.result || blankState()); store.put(next, userId); }
+      try { next = fn(normalizeLedgerState(request.result)); store.put(next, userId); }
       catch (error) { failure = error; tx.abort(); }
     };
     tx.oncomplete = () => resolve(next);

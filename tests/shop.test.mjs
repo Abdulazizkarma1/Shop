@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import 'fake-indexeddb/auto';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { applyOperation, blankState, Ledger, cachedReceipt, collectedToday, previousProjectData } from '../src/offline.js';
-import { normalizePhone, today, projectScope } from '../src/client.js';
+import { applyOperation, blankState, normalizeLedgerState, Ledger, cachedReceipt, collectedToday, previousProjectData } from '../src/offline.js';
+import { normalizePhone, today, projectScope, storageScope } from '../src/client.js';
 import * as UI from '../.checks/ui.mjs';
 Object.defineProperty(globalThis, 'navigator', { value: { onLine: false }, configurable: true });
 const product = { id: 'rice', name: 'Rice', category: 'Rice', variant: '4 × 10 kg packs', unit: 'bag', stock: 3, low: 1, price: 1200, unitPrice: 320, fraction: .25, active: true, color: 'gold', icon: 'R' };
@@ -43,6 +43,29 @@ test('two tabs cannot overwrite each other’s saved sales', async () => {
 test('a failed local write does not issue a sale or leave an outbox item', async () => {
   const ledger = new Ledger(crypto.randomUUID()); await ledger.start(); await ledger.change(() => fixture());
   await assert.rejects(() => ledger.add('sale', sale({ quantity: 50 })), /stock/i); assert.equal(ledger.current.sales.length, 0); assert.equal(ledger.current.outbox.length, 0);
+});
+test('older saved workspaces receive missing fields without losing sales or queued work', async () => {
+  const oldSale = sale({ id: 'S-OLD' });
+  const oldWorkspace = { products: [product], sales: [oldSale], purchases: [], payments: [], oldShopNote: 'keep this' };
+  const normalized = normalizeLedgerState(oldWorkspace);
+  assert.equal(normalized.sales[0].id, 'S-OLD');
+  assert.deepEqual(normalized.outbox, []);
+  assert.deepEqual(normalized.settings, {});
+  assert.equal(normalized.oldShopNote, 'keep this');
+  const damaged = normalizeLedgerState({ products: 'legacy products', sales: [oldSale] });
+  assert.equal(damaged.products.length, 0);
+  assert.equal(damaged.recovery.products, 'legacy products');
+  assert.equal(damaged.sales[0].id, 'S-OLD');
+  const id = crypto.randomUUID(), db = await new Promise((resolve, reject) => {
+    const request = indexedDB.open(`grainkeeper-ledger-v2:${storageScope}`, 1);
+    request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
+  });
+  await new Promise((resolve, reject) => { const tx = db.transaction('workspaces', 'readwrite'); tx.objectStore('workspaces').put(oldWorkspace, id); tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); });
+  db.close();
+  const reopened = new Ledger(id); await reopened.start();
+  assert.equal(reopened.current.sales[0].id, 'S-OLD');
+  assert.ok(Array.isArray(reopened.current.outbox));
+  assert.deepEqual(reopened.current.settings, {});
 });
 test('Ghana phone normalization accepts local and international forms', () => {
   assert.equal(normalizePhone('024 123 4567'), '233241234567'); assert.equal(normalizePhone('+233241234567'), '233241234567'); assert.equal(normalizePhone(''), ''); assert.throws(() => normalizePhone('abc'), /valid/);
