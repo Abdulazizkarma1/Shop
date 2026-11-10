@@ -64,7 +64,7 @@ Supabase supplies `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` inside its Edge
 
 Keep sufficient SMS credit in Mnotify. Multi-part messages may use more than one SMS credit. Sender approval and the provider's current prices are managed in your Mnotify account.
 
-In the app, save the shop name and receipt location, owner name and owner phone, then enable daily SMS in Settings. Local Ghana phone numbers such as `0241234567` are normalized to `233241234567`.
+In the app, save the shop name and receipt location, the owner name, and up to three report phone numbers, then enable daily SMS in Settings. The two additional numbers are optional and do not need shop accounts. Local Ghana phone numbers such as `0241234567` are normalized to `233241234567`.
 
 The deployed server functions are `shop-manage-users`, `send-receipt`, `daily-owner-report`, and `shop-process-sms`. The last function authenticates its scheduler using a Vault-backed secret, or verifies an admin session. It does not accept unauthenticated work. The other three require a signed-in user and verify shop membership; management and daily reports require Admin.
 
@@ -90,14 +90,14 @@ The earlier app's `gk_products`, `gk_sales`, and `gk_purchases` storage is retai
 
 ## 6. Daily 7 pm report and SMS status
 
-The installed `shop-sms-worker` Cron job runs every five minutes. At or after 19:00 Africa/Accra, it queues one daily summary for that date if daily SMS is enabled. It also processes queued receipts. The report includes sales value, collections (including today's payments on older credit sales), all customer and supplier balances, stock and notes. Only data synced to Supabase by report time can be included. Stock and note text is capped to keep the SMS summary bounded.
+The installed `shop-sms-worker` Cron job runs every five minutes. At or after 19:00 Africa/Accra, it queues the same daily summary once per configured phone number for that date if daily SMS is enabled. It also processes queued receipts. The report includes sales value, collections (including today's payments on older credit sales), all customer and supplier balances, stock and notes. Only data synced to Supabase by report time can be included. Stock and note text is capped to keep the SMS summary bounded.
 
 Settings shows:
 
 - **queued**: saved, waiting for credentials or dispatch.
 - **sending**: claimed by one worker.
 - **sent**: accepted by Mnotify; this is not a handset delivery confirmation.
-- **failed**: rejected. Correct credentials, sender or balance, then use Admin's retry button.
+- **failed**: rejected. Check the displayed provider reason, then use Admin's retry button once the issue is corrected.
 - **unknown**: a network timeout or interrupted send makes the result uncertain. Check Mnotify before resending. The system does not automatically repeat an uncertain message and risk duplicate charges.
 
 Daily summaries use one idempotency key per day. Manual **Queue today's owner summary** uses that same key and does not send a second summary after one is accepted.
