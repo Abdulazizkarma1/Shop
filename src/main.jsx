@@ -70,6 +70,12 @@ function App({ member, onSignOut }) {
     return () => { alive = false; ledger.listeners.delete(listener); clearInterval(timer); removeEventListener('online', on); removeEventListener('offline', off); removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); };
   }, [ledger, adminMode]);
 
+  const openSale = () => {
+    setSelected(null);
+    setModal('sale');
+    setMobileNav(false);
+  };
+
   const run = async fn => {
     if (busy.current) return;
     busy.current = true; setSaving(true);
@@ -130,7 +136,7 @@ function App({ member, onSignOut }) {
   return <div className="app-shell">
     <aside className={`sidebar ${mobileNav ? 'sidebar-open' : ''}`} aria-label="Main navigation">
       <div className="brand"><span className="brand-mark"><Wheat size={21}/></span><span><strong>Shop desk</strong><small>{state.settings.shop_name || 'Hajia Asumaya Shop'}</small></span><button className="icon-button close-nav" aria-label="Close menu" onClick={() => setMobileNav(false)}><X/></button></div>
-      <button className="button sale-primary sidebar-sale" onClick={() => { setSelected(null); setModal('sale'); setMobileNav(false); }}><Plus/>New Sale</button>
+      <button className="button sale-primary sidebar-sale" onClick={openSale}><Plus/>New Sale</button>
       <nav className="primary-nav">{primary.filter(item => !item.action).map(({ name, label, icon: Icon }) => <button key={name} className={`nav-link ${active === name ? 'nav-active' : ''}`} onClick={() => go(name)}><Icon/><span>{label}</span></button>)}</nav>
       <button className="connection-card" onClick={() => go('Settings')} aria-label={`Connection status: ${status}. Open sync settings`}><span className={`status-icon ${statusClass(status)}`}>{status === 'Offline' ? <CloudOff/> : <Cloud/>}</span><span><b>{status}</b><small>{state.outbox.length ? `${state.outbox.length} waiting to sync` : online ? 'Shop is up to date' : 'Saved work stays on this device'}</small></span></button>
       <div className="profile-row"><span className="avatar">{(member.display_name || 'Shop').slice(0, 1).toUpperCase()}</span><span><b>{member.display_name || 'Shop user'}</b><small>{adminMode ? 'Admin' : 'Seller'}</small></span><button className="icon-button" aria-label="Sign out" onClick={signOut}><LogOut/></button></div>
@@ -140,7 +146,7 @@ function App({ member, onSignOut }) {
       <header className="topbar"><button className="icon-button mobile-menu" aria-label="Open menu" onClick={() => setMobileNav(true)}><Menu/></button><div className="topbar-title"><b>{active === 'Overview' ? 'Shop counter' : active}</b><span>{todayLabel()}</span></div><button onClick={() => state.outbox.length && online ? ledger.sync(true) : go('Settings')} aria-label={`${status}${state.outbox.length ? `, ${state.outbox.length} waiting to sync. Tap to retry` : '. Tap for settings'}`} title={state.outbox.length && online ? 'Tap to retry sync' : 'Open sync settings'} className={`status-chip ${statusClass(status)}`}><i/>{status}{state.outbox.length > 0 && ` · ${state.outbox.length}`}</button></header>
       <div className="page-content">
         {(state.error || (!state.lastSync && !products.length)) && <div className={`sync-banner ${state.error ? 'sync-error' : ''}`} role={state.error ? 'alert' : 'status'}><span>{state.error || (online ? 'Stock will appear here after the first successful sync.' : 'You are offline. Previously saved stock and sales remain available.')}</span><button className="button button-small" disabled={!online} onClick={() => state.error || state.outbox.length ? ledger.sync(true) : go('Settings')}>{state.error || state.outbox.length ? 'Retry sync' : 'Sync details'}</button></div>}
-        {active === 'Overview' && <Overview {...{ todaySales, todayRevenue, todayCollected, outstanding, lowStock, products, sales, online, status, state, adminMode, setModal, setActive: go, setSelectedProduct, saving, retrySync: () => ledger.sync(true) }}/>} 
+        {active === 'Overview' && <Overview {...{ todaySales, todayRevenue, todayCollected, outstanding, lowStock, sales, online, status, state, adminMode, onNewSale: openSale, onReceipt: setReceipt, setActive: go, retrySync: () => ledger.sync(true) }}/>} 
         {active === 'Sales' && <SalesPage {...{ sales, products, state, search, setSearch, saleFilter, setSaleFilter, setModal, setSelected, setReceipt }}/>} 
         {active === 'Inventory' && <InventoryPage {...{ products, search, setSearch, adminMode, setModal, setSelected, selected, updateProduct, totalGoods }}/>} 
         {active === 'Purchases' && adminMode && <PurchasesPage {...{ purchases, products, setModal }}/>} 
@@ -150,7 +156,7 @@ function App({ member, onSignOut }) {
         {active === 'More' && <MorePage {...{ adminMode, go, signOut, state }}/>} 
       </div>
     </main>
-    <nav className="mobile-tabbar" aria-label="Quick actions">{primary.map(({ name, label, icon: Icon, action }) => <button key={name} className={`${(action ? modal === 'sale' : active === name) ? 'tab-active' : ''} ${action ? 'tab-sale' : ''}`} aria-label={label} onClick={() => action ? (setSelected(null), setModal('sale')) : go(name)}><Icon/><span>{label}</span></button>)}</nav>
+    <nav className="mobile-tabbar" aria-label="Quick actions">{primary.map(({ name, label, icon: Icon, action }) => <button key={name} className={`${(action ? modal === 'sale' : active === name) ? 'tab-active' : ''} ${action ? 'tab-sale' : ''}`} aria-label={label} onClick={action ? openSale : () => go(name)}><Icon/><span>{label}</span></button>)}</nav>
     {modal === 'sale' && <SaleModal products={products.filter(p => p.active !== false)} initial={selected} online={online} onClose={() => setModal('')} onSave={doSale}/>}
     {modal === 'purchase' && adminMode && <PurchaseModal products={products.filter(p => p.active !== false)} onClose={() => setModal('')} onSave={doPurchase} onNewProduct={() => setModal('product')}/>}
     {modal === 'product' && adminMode && <ProductModal onClose={() => setModal('')} onSave={addProduct}/>}
@@ -164,15 +170,15 @@ function App({ member, onSignOut }) {
 function statusClass(status) { return status === 'Needs attention' ? 'status-attention' : status === 'Offline' ? 'status-offline' : status === 'Synced' ? 'status-synced' : 'status-pending'; }
 function PageTitle({ title, subtitle, action }) { return <div className="page-title-row"><div><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>{action}</div>; }
 function EmptyState({ title, text, icon: Icon = FileText, action }) { return <div className="empty-state"><Icon/><b>{title}</b><span>{text}</span>{action}</div>; }
-function Overview({ todaySales, todayRevenue, todayCollected, outstanding, lowStock, products, sales, online, status, state = { outbox: [] }, adminMode, setModal, setActive, setSelectedProduct, saving, retrySync }) {
+function Overview({ todaySales, todayRevenue, todayCollected, outstanding, lowStock, sales, online, status, state = { outbox: [] }, adminMode, onNewSale, onReceipt, setActive, retrySync }) {
   const recent = sales.slice(0, 4);
   return <>
     <div className="welcome-row"><div><p className="eyebrow">{todayLabel()}</p><h1>Welcome, {adminMode ? 'Admin' : 'shopkeeper'}</h1><p className="welcome-help">Ready for the next customer?</p></div><span className={`status-chip status-chip-large ${statusClass(status)}`}><i/>{status}{state.outbox.length > 0 && ` · ${state.outbox.length}`}</span></div>
-    <button className="new-sale-card" onClick={() => { setSelectedProduct(null); setModal('sale'); }}><span className="sale-icon"><Plus/></span><span><b>New Sale</b><small>Choose an item and record payment</small></span><ArrowRight className="sale-arrow"/></button>
+    <button className="new-sale-card" onClick={onNewSale}><span className="sale-icon"><Plus/></span><span><b>New Sale</b><small>Choose an item and record payment</small></span><ArrowRight className="sale-arrow"/></button>
     <section className="today-summary" aria-label="Today's summary"><div className="summary-heading"><h2>Today</h2><span>Ghana cedis (GH₵)</span></div><div className="summary-values"><div><span>Sales</span><b>{currency(todayRevenue)}</b><small>{todaySales.length} {todaySales.length === 1 ? 'sale' : 'sales'}</small></div><div><span>Money collected</span><b>{currency(todayCollected)}</b><small>Including payments on older balances</small></div></div></section>
     {(state.error || !online && state.outbox.length > 0) && <div className={`notice ${state.error ? 'notice-error' : ''}`} role={state.error ? 'alert' : 'status'}><span className="notice-symbol">{state.error ? '!' : '↻'}</span><span><b>{state.error ? 'Needs attention' : 'Waiting to sync'}</b><small>{state.error || `${state.outbox.length} saved request(s) will sync when internet returns.`}</small></span><button className="text-link" disabled={!online} onClick={retrySync}>Retry</button></div>}
     {(lowStock.length > 0 || outstanding > 0) && <section className="alert-list"><h2>Needs a look</h2>{lowStock.length > 0 && <button className="alert-row" onClick={() => setActive('Inventory')}><span className="alert-icon alert-amber"><Boxes/></span><span><b>Low stock</b><small>{lowStock.slice(0, 3).map(p => `${p.name} (${p.stock} ${p.unit})`).join(' · ')}{lowStock.length > 3 ? ` · +${lowStock.length - 3} more` : ''}</small></span><ChevronRight/></button>}{outstanding > 0 && <button className="alert-row" onClick={() => setActive('Receivables')}><span className="alert-icon alert-green"><HandCoins/></span><span><b>Customer balances</b><small>{currency(outstanding)} still to collect</small></span><ChevronRight/></button>}</section>}
-    <section className="recent-section"><div className="section-heading"><div><h2>Recent sales</h2><p>Latest records from this shop</p></div><button className="text-link" onClick={() => setActive('Sales')}>See all <ArrowRight/></button></div>{recent.length ? <div className="record-list">{recent.map(s => <SaleRecord key={s.clientId || s.id} sale={s} outbox={state.outbox} onReceipt={() => { setSelectedProduct(s); setActive('Sales'); }}/>)}</div> : <EmptyState icon={ShoppingBag} title="No sales recorded yet" text="Your first sale will appear here."/>}</section>
+    <section className="recent-section"><div className="section-heading"><div><h2>Recent sales</h2><p>Latest records from this shop</p></div><button className="text-link" onClick={() => setActive('Sales')}>See all <ArrowRight/></button></div>{recent.length ? <div className="record-list">{recent.map(s => <SaleRecord key={s.clientId || s.id} sale={s} outbox={state.outbox} onReceipt={() => onReceipt(s)}/>)}</div> : <EmptyState icon={ShoppingBag} title="No sales recorded yet" text="Your first sale will appear here."/>}</section>
     {adminMode && <button className="admin-shortcut" onClick={() => setActive('More')}><Settings/><span><b>Admin tools</b><small>Purchases, reports, team and shop settings</small></span><ChevronRight/></button>}
   </>;
 }

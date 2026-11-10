@@ -73,12 +73,30 @@ test('Ghana phone normalization accepts local and international forms', () => {
 for (const filled of [false, true]) for (const adminMode of [false, true]) {
   test(`every dashboard page renders with ${filled ? 'saved' : 'empty'} data as ${adminMode ? 'Admin' : 'Seller'}`, () => {
     const sales = filled ? [sale()] : [], purchases = filled ? [{ id: 'P-TEST', clientId: 'p1', supplier: 'Supplier', product: 'Rice', quantity: 1, total: 1000, paid: 500, balance: 500, date: today(), due: '', note: '' }] : [];
-    const props = { products: filled ? [product] : [], sales, purchases, search: '', setSearch: noop, saleFilter: 'All sales', setSaleFilter: noop, adminMode, modal: '', selectedProduct: product, selected: product, state: { ...blankState(), outbox: [] }, status: 'Synced', setModal: noop, setSelected: noop, setSelectedProduct: noop, updateProduct: noop, setActive: noop, setReceipt: noop, onReceipt: noop, payBalance: noop, paySupplierBalance: noop, totalGoods: filled ? 3 : 0, todaySales: sales, todayRevenue: 300, todayCollected: 100, outstanding: 200, pendingPurchases: 500, lowStock: [], online: true, notify: noop, smartOpen: false, setSmartOpen: noop };
+    const props = { products: filled ? [product] : [], sales, purchases, search: '', setSearch: noop, saleFilter: 'All sales', setSaleFilter: noop, adminMode, modal: '', selectedProduct: product, selected: product, state: { ...blankState(), outbox: [] }, status: 'Synced', setModal: noop, setSelected: noop, onNewSale: noop, updateProduct: noop, setActive: noop, setReceipt: noop, onReceipt: noop, payBalance: noop, paySupplierBalance: noop, totalGoods: filled ? 3 : 0, todaySales: sales, todayRevenue: 300, todayCollected: 100, outstanding: 200, pendingPurchases: 500, lowStock: [], online: true, notify: noop, smartOpen: false, setSmartOpen: noop };
     for (const name of ['Overview', 'SalesPage', 'InventoryPage', 'PurchasesPage', 'ReceivablesPage', 'ReportsPage']) assert.ok(renderToStaticMarkup(React.createElement(UI[name], props)).length > 20, name);
     assert.ok(renderToStaticMarkup(React.createElement(UI.InventoryPage, { ...props, products: [product] })).includes('Rice'));
     if (adminMode) assert.ok(renderToStaticMarkup(React.createElement(UI.EditProductModal, { product, onClose: noop, onSave: noop })).includes('Save changes'));
   });
 }
+test('home forwards New Sale and the exact recent sale to the dashboard actions', () => {
+  const savedSale = sale();
+  let openedSale = false;
+  let openedReceipt;
+  const home = UI.Overview({
+    sales: [savedSale], todaySales: [savedSale], lowStock: [],
+    todayRevenue: savedSale.amount, todayCollected: savedSale.paid,
+    onNewSale: () => { openedSale = true; },
+    onReceipt: record => { openedReceipt = record; },
+  });
+  const newSaleButton = home.props.children.find(child => child?.props?.className === 'new-sale-card');
+  const recentSection = home.props.children.find(child => child?.props?.className === 'recent-section');
+  const [recentRecord] = recentSection.props.children[1].props.children;
+  newSaleButton.props.onClick();
+  recentRecord.props.onReceipt();
+  assert.equal(openedSale, true);
+  assert.equal(openedReceipt, savedSale);
+});
 test('sale, purchase and receipt dialogs render without a database connection', () => {
   for (const [name, props] of [['SaleModal',{products:[product]}],['SaleModal',{products:[]}],['PurchaseModal',{products:[product]}],['ProductModal',{}],['EditProductModal',{product}],['ReceiptModal',{sale:sale(),settings:{}}]]) assert.ok(renderToStaticMarkup(React.createElement(UI[name],{...props,onClose:noop,onSave:noop,onSend:noop,onArchive:noop,onNewProduct:noop})).length>30);
 });
