@@ -218,8 +218,41 @@ function ReportsPage({ sales, purchases, products, todayRevenue, todayCollected,
 function ModalShell({ title, subtitle, onClose, children, wide = false }) {
   const ref = useRef(null);
   const closeRef = useRef(onClose); closeRef.current = onClose;
-  useEffect(() => { const previous = document.activeElement; const focus = () => (ref.current?.querySelector('[autofocus]') || ref.current)?.focus(); requestAnimationFrame(focus); const key = e => { if (e.key === 'Escape') closeRef.current(); if (e.key === 'Tab' && ref.current) { const items = [...ref.current.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"])')].filter(el => el.offsetParent !== null); if (!items.length) { e.preventDefault(); ref.current.focus(); return; } const first = items[0], last = items.at(-1); if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); } } }; document.addEventListener('keydown', key); return () => { document.removeEventListener('keydown', key); previous?.focus?.(); }; }, []);
-  return <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && onClose()}><section ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="dialog-title" className={`modal-card ${wide ? 'modal-wide' : ''}`}><header className="modal-header"><div><h2 id="dialog-title">{title}</h2>{subtitle && <p>{subtitle}</p>}</div><button className="icon-button" aria-label="Close" onClick={onClose}><X/></button></header>{children}</section></div>;
+  useEffect(() => {
+    const dialog = ref.current;
+    const previous = document.activeElement;
+    const frame = requestAnimationFrame(() => {
+      if (!dialog.contains(document.activeElement)) dialog.focus({ preventScroll: true });
+    });
+    const handleKey = event => {
+      if (event.key === 'Escape') closeRef.current();
+      if (event.key !== 'Tab') return;
+      const items = [...dialog.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"])')]
+        .filter(item => item.offsetParent !== null);
+      const first = items[0];
+      const last = items.at(-1);
+      const active = document.activeElement;
+      if (!first || !dialog.contains(active) || (event.shiftKey ? active === first || active === dialog : active === last)) {
+        event.preventDefault();
+        (event.shiftKey ? last ?? dialog : first ?? dialog).focus();
+      }
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener('keydown', handleKey);
+      if (!dialog.contains(previous)) previous?.focus?.({ preventScroll: true });
+    };
+  }, []);
+  return <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && onClose()}>
+    <section ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="dialog-title" className={`modal-card ${wide ? 'modal-wide' : ''}`}>
+      <header className="modal-header">
+        <div><h2 id="dialog-title">{title}</h2>{subtitle && <p>{subtitle}</p>}</div>
+        <button className="icon-button" aria-label="Close" onClick={onClose}><X/></button>
+      </header>
+      <div className="modal-body">{children}</div>
+    </section>
+  </div>;
 }
 
 function SaleModal({ products, initial, onClose, onSave }) {
@@ -250,7 +283,7 @@ function SaleModal({ products, initial, onClose, onSave }) {
     onSave({ id: newId('S'), productId, product: product.name, variant: loose ? `Single unit · ${Number(product.fraction) * 100}% of ${product.unit}` : product.variant, quantity: Number(quantity), unitPrice: Number(price), packMode: loose ? 'loose' : 'pack', stockDeduct: stockNeeded, amount: total, paid: payment, balance: Math.max(0, total - payment), customer: customer.trim() || 'Walk-in', phone: phone.trim(), method: payment === 0 ? 'Credit' : method, time: new Date().toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit' }), date: dateKey(), createdAt: new Date().toISOString(), note: note.trim() });
   };
   return <ModalShell title="New Sale" subtitle="Choose the item, then confirm payment." onClose={onClose} wide><form className="modal-form sale-form" onSubmit={submit}>
-    <label className="search-box sale-search"><Search/><span className="sr-only">Find a product</span><input autoFocus placeholder="Find a product" value={query} onChange={e => setQuery(e.target.value)}/></label>
+    <label className="search-box sale-search"><Search/><span className="sr-only">Find a product</span><input type="search" placeholder="Find a product" value={query} onChange={e => setQuery(e.target.value)}/></label>
     <div className="product-choice-list" role="group" aria-label="Choose a product">{options.map(p => <button type="button" key={p.id} className={`product-choice ${p.id === productId ? 'choice-selected' : ''}`} aria-pressed={p.id === productId} onClick={() => setProductId(p.id)}><span className="choice-check">{p.id === productId ? <Check/> : <Wheat/>}</span><span><b>{p.name}</b><small>{p.variant}</small></span><strong>{p.stock} {p.unit}{p.stock === 1 ? '' : 's'}</strong></button>)}{!options.length && <p className="muted-copy">No matching products.</p>}</div>
     {product && <>
       {isRice && <fieldset className="form-section"><legend>What did they buy?</legend><div className="choice-grid"><button type="button" className={`choice-button ${packMode === 'pack' ? 'selected' : ''}`} aria-pressed={packMode === 'pack'} onClick={() => setPackMode('pack')}><Package/><span><b>Full {product.unit}</b><small>{product.variant}</small></span><strong>{currency(product.price)}</strong></button><button type="button" className={`choice-button ${packMode === 'loose' ? 'selected' : ''}`} aria-pressed={packMode === 'loose'} onClick={() => setPackMode('loose')}><Wheat/><span><b>Loose unit</b><small>One unit uses {1 / Number(product.fraction)} of a {product.unit}</small></span><strong>{currency(product.unitPrice)}</strong></button></div></fieldset>}
